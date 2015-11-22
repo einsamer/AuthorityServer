@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xmlns:oauth="http://www.springframework.org/schema/security/oauth2"
+    xmlns:sec="http://www.springframework.org/schema/security" 
+    xmlns:mvc="http://www.springframework.org/schema/mvc"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/security/oauth2 http://www.springframework.org/schema/security/spring-security-oauth2-2.0.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd
+        http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-4.0.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.2.xsd">
+        
+        <oauth:authorization-server
+            client-details-service-ref="clientDetails"
+            token-services-ref="tokenService"
+            user-approval-page="forward:/oauth/custom_confirm_access">
+            <oauth:authorization-code/>
+            <oauth:implicit/>
+        </oauth:authorization-server>
+        
+        <!--<oauth:client-details-service id="clientDetails">
+            <oauth:client client-id="trusted_client"
+                          secret="secret"
+                          scope="read,trust"
+                          resource-ids="rest-data"
+                          authorized-grant-types="authorization_code, implicit"
+                          authorities="ROLE_USER"
+                          redirect-uri="http://localhost:8888/AuthorizationClient/home"
+             />
+             <oauth:client client-id="id"
+                          secret="secret"
+                          scope="read,trust"
+                          resource-ids="rest-data"
+                          authorized-grant-types="authorization_code"
+                          authorities="ROLE_USER"
+                          redirect-uri="http://localhost:8888/AuthorizationCodeServer/anonymous/authenication"/>
+        </oauth:client-details-service>-->
+        <bean id = "clientDetails" class = "com.src.service.ClientCustomDetailsService"></bean>
+        <bean id = "tokenService" class = "org.springframework.security.oauth2.provider.token.DefaultTokenServices">
+            <property name="tokenStore" ref="tokenStore"/>
+        </bean>
+        <bean id = "tokenStore" class = "org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore"></bean>
+    
+        
+		<oauth:resource-server id="resourceServerFilter"       
+		                        resource-id="rest-data"     
+		                        token-services-ref="tokenService" />
+		<sec:http pattern="/user/info**" 
+		  create-session="stateless"
+		  authentication-manager-ref="clientAuthenicationManager"
+		  use-expressions="true"
+		  entry-point-ref="clientAuthenticationEntryPoint">
+		      <sec:anonymous enabled="false"/>
+		      <sec:intercept-url pattern="/user/info**" access="hasRole('ROLE_USER')"/>
+		      <sec:custom-filter ref="resourceServerFilter" before="PRE_AUTH_FILTER"/>
+		      <sec:access-denied-handler ref="oauthAccessDeniedHandler"/>
+		      <sec:expression-handler ref="oauthWebExpressionHandler" />
+		</sec:http>
+		
+		<sec:http pattern="/oauth/token"
+			create-session="stateless"
+			authentication-manager-ref="clientAuthenicationManager"
+			use-expressions="true"
+			entry-point-ref="clientAuthenticationEntryPoint">
+			<sec:anonymous enabled="false"/>
+			<sec:intercept-url pattern="/oauth/token" access="permitAll"/>
+			<sec:custom-filter ref="clientCredentialsTokenEndpointFilter" after="BASIC_AUTH_FILTER"/>
+			<sec:access-denied-handler ref="oauthAccessDeniedHandler"/>
+			<sec:expression-handler ref="oauthWebExpressionHandler" />
+			<sec:csrf disabled="true"/>
+		</sec:http>
+		<bean id="clientCredentialsTokenEndpointFilter"
+            class="org.springframework.security.oauth2.provider.client.ClientCredentialsTokenEndpointFilter">
+            <property name="authenticationManager" ref="clientAuthenicationManager" />
+        </bean>
+		
+		<bean id="clientAuthenticationEntryPoint"
+	        class="org.springframework.security.oauth2.provider.error.OAuth2AuthenticationEntryPoint">
+	        <property name="realmName" value="test" />
+        </bean>
+		
+		<sec:authentication-manager id="clientAuthenicationManager">
+		  <sec:authentication-provider user-service-ref="clientDetailsUserService"></sec:authentication-provider>
+		</sec:authentication-manager>
+		
+		<bean id="clientDetailsUserService"   
+		    class="org.springframework.security.oauth2.provider.client.ClientDetailsUserDetailsService">    
+		    <constructor-arg ref="clientDetails" />
+		</bean>
+        <sec:authentication-manager alias="authenticationManager"> 
+		    <sec:authentication-provider user-service-ref="inMemoryUserService"/>
+		</sec:authentication-manager>
+		
+		<sec:user-service id="inMemoryUserService">  
+		    <sec:user name="admin" password="123" authorities="ROLE_USER"/>
+		    <sec:user name="Einsamer" password="123" authorities="ROLE_USER"/>
+		    <sec:user name="Harold" password="123" authorities="ROLE_USER"/>
+		    <sec:user name="Hawk" password="123" authorities="ROLE_USER"/>
+		    <sec:user name="Vincent" password="123" authorities="ROLE_USER"/>
+		    <sec:user name="Carter" password="123" authorities="ROLE_USER"/>
+		    <sec:user name="Akos" password="123" authorities="ROLE_USER"/>
+		    <sec:user name="Vidal" password="123" authorities="ROLE_USER"/>
+		</sec:user-service>
+		
+		
+	    <bean id="oauthAccessDeniedHandler"
+            class="org.springframework.security.oauth2.provider.error.OAuth2AccessDeniedHandler" />
+        <oauth:web-expression-handler id="oauthWebExpressionHandler" />
+        <sec:http auto-config="true">
+            <sec:form-login login-page="/anonymous/login"
+                            login-processing-url="/login"
+                            />
+            <sec:csrf disabled="true"/>
+        </sec:http>
+</beans>
